@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import { Card, CardHeader, CardContent } from './ui/Card';
@@ -83,7 +82,7 @@ export default function UserForm() {
           </CardContent>
         </Card>
 
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
           <Card>
             <CardHeader><h2 className="text-2xl font-semibold">Summary</h2></CardHeader>
             <CardContent>
@@ -94,7 +93,7 @@ export default function UserForm() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

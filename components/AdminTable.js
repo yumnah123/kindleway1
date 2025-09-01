@@ -10,6 +10,7 @@ export default function AdminTable({ password }) {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [loading, setLoading] = useState(false);
+  const [submittedByFilter, setSubmittedByFilter] = useState('');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('created');
   const [sortDir, setSortDir] = useState('desc');
@@ -33,6 +34,9 @@ export default function AdminTable({ password }) {
 
   const filtered = useMemo(() => {
     let r = [...rows];
+    if (submittedByFilter) {
+      r = r.filter(x => String(x.submitted_by||'') === submittedByFilter);
+    }
     if (search) {
       const s = search.toLowerCase();
       r = r.filter(x =>
@@ -89,7 +93,11 @@ export default function AdminTable({ password }) {
             <Input type="date" value={fromDate} onChange={e=>setFromDate(e.target.value)} />
             <Input type="date" value={toDate} onChange={e=>setToDate(e.target.value)} />
             <Input placeholder="Search (submitted by / amount)" value={search} onChange={e=>setSearch(e.target.value)} className="md:col-span-2" />
-            <Button onClick={()=>{setPage(1); load();}}>Apply</Button>
+            <select value={submittedByFilter} onChange={e=>setSubmittedByFilter(e.target.value)} className="input">
+  <option value="">All Users</option>
+  {[...new Set(rows.map(r=>r.submitted_by).filter(Boolean))].map(u=>(<option key={u} value={u}>{u}</option>))}
+</select>
+<Button onClick={()=>{setPage(1); load();}}>Apply</Button>
           </div>
         </CardContent>
       </Card>
@@ -137,7 +145,11 @@ export default function AdminTable({ password }) {
       <Card id="export">
         <CardHeader><h2 className="text-xl font-semibold">Export</h2></CardHeader>
         <CardContent>
-          <Button onClick={exportCsv}>Download CSV</Button>
+          <select value={submittedByFilter} onChange={e=>setSubmittedByFilter(e.target.value)} className="input">
+  <option value="">All Users</option>
+  {[...new Set(rows.map(r=>r.submitted_by).filter(Boolean))].map(u=>(<option key={u} value={u}>{u}</option>))}
+</select>
+<Button onClick={exportCsv}>Download CSV</Button>
         </CardContent>
       </Card>
     </div>

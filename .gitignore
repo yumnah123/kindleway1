@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+.vercel/
+dist/
+.env*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

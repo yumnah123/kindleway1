@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import { Card, CardHeader, CardContent } from './ui/Card';
-import { AlertTriangle, CheckCircle2, Gem, Landmark, Banknote, Building2, HandCoins, Wallet } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Gem, Landmark, Banknote, Building2, HandCoins, Wallet, User } from 'lucide-react';
 
 const fields = [
   { key: 'gold', label: 'Gold (PKR)', icon: Gem },
@@ -18,6 +18,7 @@ const fields = [
 
 export default function UserForm() {
   const [values, setValues] = useState(Object.fromEntries(fields.map(f => [f.key, ''])));
+  const [submittedBy, setSubmittedBy] = useState('');   // ✅ new state for user name/email
   const [status, setStatus] = useState(null);
   const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -41,13 +42,21 @@ export default function UserForm() {
     setStatus(null);
     try {
       const res = await fetch('/api/zakat', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...numbers })
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...numbers,
+          total_assets: totalAssets,
+          net_assets: netAssets,
+          zakaat,
+          submitted_by: submittedBy    // ✅ send to backend
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Server error');
       setSuccess(`Saved! Net Assets: PKR ${data.net_assets}, Zakat: PKR ${data.zakaat}`);
       setValues(Object.fromEntries(fields.map(f => [f.key, ''])));
+      setSubmittedBy('');
     } catch (err) {
       setStatus(err.message || 'Server error');
     } finally { setLoading(false); }
@@ -63,22 +72,59 @@ export default function UserForm() {
         <Card>
           <CardHeader>
             <h2 className="text-2xl font-semibold">Assets & Liabilities</h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">Enter your details. Zakat is 2.5% of net assets.</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">
+              Enter your details. Zakat is 2.5% of net assets.
+            </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={submit} className="space-y-4">
+              {/* ✅ User Name/Email input */}
+              <label className="space-y-1 block">
+                <span className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                  <User className="h-4 w-4" /> Your Name or Email
+                </span>
+                <Input
+                  type="text"
+                  placeholder="Enter your name or email"
+                  value={submittedBy}
+                  onChange={e => setSubmittedBy(e.target.value)}
+                  required
+                />
+              </label>
+
+              {/* Asset & Liability fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {fields.map(({ key, label, icon:Icon }) => (
                   <label key={key} className="space-y-1">
-                    <span className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2"><Icon className="h-4 w-4" /> {label}</span>
-                    <Input type="number" step="0.01" placeholder="0" value={values[key]} onChange={e => onChange(key, e.target.value)} />
+                    <span className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                      <Icon className="h-4 w-4" /> {label}
+                    </span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0"
+                      value={values[key]}
+                      onChange={e => onChange(key, e.target.value)}
+                    />
                   </label>
                 ))}
               </div>
-              <Button type="submit" disabled={loading} className="mt-2">{loading ? 'Saving…' : 'Submit'}</Button>
+
+              <Button type="submit" disabled={loading} className="mt-2">
+                {loading ? 'Saving…' : 'Submit'}
+              </Button>
             </form>
-            {success && <div className="mt-4 rounded-xl px-4 py-3 ring-1 ring-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 flex items-center gap-2"><CheckCircle2 className="h-5 w-5"/>{success}</div>}
-            {status && <div className="mt-4 rounded-xl px-4 py-3 ring-1 ring-rose-200 bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300 flex items-center gap-2"><AlertTriangle className="h-5 w-5"/>{status}</div>}
+
+            {success && (
+              <div className="mt-4 rounded-xl px-4 py-3 ring-1 ring-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5"/> {success}
+              </div>
+            )}
+            {status && (
+              <div className="mt-4 rounded-xl px-4 py-3 ring-1 ring-rose-200 bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5"/> {status}
+              </div>
+            )}
           </CardContent>
         </Card>
 

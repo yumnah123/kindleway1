@@ -17,8 +17,9 @@ const fields = [
 ];
 
 export default function UserForm() {
-  const [values, setValues] = useState(Object.fromEntries(fields.map(f => [f.key, ''])));
-  const [submittedBy, setSubmittedBy] = useState('');   // ✅ new state for user name/email
+  const [values, setValues] = useState(
+    Object.fromEntries([...fields.map(f => [f.key, '']), ['submitted_by', '']])
+  );
   const [status, setStatus] = useState(null);
   const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -29,13 +30,22 @@ export default function UserForm() {
     return obj;
   }, [values]);
 
-  const totalAssets = numbers.gold + numbers.silver + numbers.cash + numbers.bank + numbers.business + numbers.investments + numbers.property + numbers.other;
+  const totalAssets =
+    numbers.gold +
+    numbers.silver +
+    numbers.cash +
+    numbers.bank +
+    numbers.business +
+    numbers.investments +
+    numbers.property +
+    numbers.other;
+
   const netAssets = Math.max(0, totalAssets - numbers.liabilities);
   const zakaat = +(netAssets * 0.025).toFixed(2);
 
-  const onChange = (k, v) => setValues((prev) => ({ ...prev, [k]: v }));
+  const onChange = (k, v) => setValues(prev => ({ ...prev, [k]: v }));
 
-  const submit = async (e) => {
+  const submit = async e => {
     e.preventDefault();
     setLoading(true);
     setSuccess(null);
@@ -44,22 +54,17 @@ export default function UserForm() {
       const res = await fetch('/api/zakat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...numbers,
-          total_assets: totalAssets,
-          net_assets: netAssets,
-          zakaat,
-          submitted_by: submittedBy    // ✅ send to backend
-        })
+        body: JSON.stringify({ ...numbers, submitted_by: values.submitted_by })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Server error');
       setSuccess(`Saved! Net Assets: PKR ${data.net_assets}, Zakat: PKR ${data.zakaat}`);
-      setValues(Object.fromEntries(fields.map(f => [f.key, ''])));
-      setSubmittedBy('');
+      setValues(Object.fromEntries([...fields.map(f => [f.key, '']), ['submitted_by', '']]));
     } catch (err) {
       setStatus(err.message || 'Server error');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -78,7 +83,7 @@ export default function UserForm() {
           </CardHeader>
           <CardContent>
             <form onSubmit={submit} className="space-y-4">
-              {/* ✅ User Name/Email input */}
+              {/* User Name Input */}
               <label className="space-y-1 block">
                 <span className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
                   <User className="h-4 w-4" /> Your Name or Email
@@ -86,15 +91,14 @@ export default function UserForm() {
                 <Input
                   type="text"
                   placeholder="Enter your name or email"
-                  value={submittedBy}
-                  onChange={e => setSubmittedBy(e.target.value)}
+                  value={values.submitted_by}
+                  onChange={e => onChange('submitted_by', e.target.value)}
                   required
                 />
               </label>
 
-              {/* Asset & Liability fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {fields.map(({ key, label, icon:Icon }) => (
+                {fields.map(({ key, label, icon: Icon }) => (
                   <label key={key} className="space-y-1">
                     <span className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
                       <Icon className="h-4 w-4" /> {label}
@@ -117,25 +121,40 @@ export default function UserForm() {
 
             {success && (
               <div className="mt-4 rounded-xl px-4 py-3 ring-1 ring-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5"/> {success}
+                <CheckCircle2 className="h-5 w-5" />
+                {success}
               </div>
             )}
+
             {status && (
               <div className="mt-4 rounded-xl px-4 py-3 ring-1 ring-rose-200 bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300 flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5"/> {status}
+                <AlertTriangle className="h-5 w-5" />
+                {status}
               </div>
             )}
           </CardContent>
         </Card>
 
+        {/* Summary */}
         <div>
           <Card>
-            <CardHeader><h2 className="text-2xl font-semibold">Summary</h2></CardHeader>
+            <CardHeader>
+              <h2 className="text-2xl font-semibold">Summary</h2>
+            </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="flex justify-between"><span>Total Assets</span><span className="font-semibold">PKR {totalAssets.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Net Assets</span><span className="font-semibold">PKR {netAssets.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Zakat (2.5%)</span><span className="font-semibold">PKR {zakaat.toFixed(2)}</span></div>
+                <div className="flex justify-between">
+                  <span>Total Assets</span>
+                  <span className="font-semibold">PKR {totalAssets.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Net Assets</span>
+                  <span className="font-semibold">PKR {netAssets.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Zakat (2.5%)</span>
+                  <span className="font-semibold">PKR {zakaat.toFixed(2)}</span>
+                </div>
               </div>
             </CardContent>
           </Card>

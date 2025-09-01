@@ -23,7 +23,10 @@ export default function AdminTable({ password }) {
     if (minNetAssets) q.set('minNetAssets', minNetAssets);
     if (fromDate) q.set('fromDate', fromDate);
     if (toDate) q.set('toDate', toDate);
-    const res = await fetch('/api/admin/logs?' + q.toString(), { headers: { 'x-admin-pass': password }});
+    if (submittedByFilter) q.set('submittedBy', submittedByFilter); // ✅ send filter to API
+    const res = await fetch('/api/admin/logs?' + q.toString(), {
+      headers: { 'x-admin-pass': password }
+    });
     const data = await res.json();
     setLoading(false);
     if (res.ok) setRows(data.rows);
@@ -35,73 +38,90 @@ export default function AdminTable({ password }) {
   const filtered = useMemo(() => {
     let r = [...rows];
     if (submittedByFilter) {
-      r = r.filter(x => String(x.submitted_by||'') === submittedByFilter);
+      r = r.filter(x => String(x.submitted_by || '') === submittedByFilter);
     }
     if (search) {
       const s = search.toLowerCase();
       r = r.filter(x =>
-        String(x.submitted_by||'').toLowerCase().includes(s) ||
-        String(x.net_assets||'').includes(s) ||
-        String(x.zakaat||'').includes(s)
+        String(x.submitted_by || '').toLowerCase().includes(s) ||
+        String(x.net_assets || '').includes(s) ||
+        String(x.zakaat || '').includes(s)
       );
     }
-    r.sort((a,b)=>{
+    r.sort((a, b) => {
       const A = a[sortBy]; const B = b[sortBy];
-      if (sortBy === 'created') return sortDir==='asc' ? new Date(A)-new Date(B) : new Date(B)-new Date(A);
-      return sortDir==='asc' ? (A-B) : (B-A);
+      if (sortBy === 'created') return sortDir === 'asc' ? new Date(A) - new Date(B) : new Date(B) - new Date(A);
+      return sortDir === 'asc' ? (A - B) : (B - A);
     });
     return r;
-  }, [rows, search, sortBy, sortDir]);
+  }, [rows, search, sortBy, sortDir, submittedByFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const start = (page-1)*pageSize;
-  const view = filtered.slice(start, start+pageSize);
+  const start = (page - 1) * pageSize;
+  const view = filtered.slice(start, start + pageSize);
 
   const exportCsv = async () => {
     const q = new URLSearchParams();
     if (minNetAssets) q.set('minNetAssets', minNetAssets);
     if (fromDate) q.set('fromDate', fromDate);
     if (toDate) q.set('toDate', toDate);
-    const res = await fetch('/api/admin/export?' + q.toString(), { headers: { 'x-admin-pass': password }});
+    if (submittedByFilter) q.set('submittedBy', submittedByFilter); // ✅ include user filter
+    const res = await fetch('/api/admin/export?' + q.toString(), {
+      headers: { 'x-admin-pass': password }
+    });
     if (!res.ok) {
-      const d = await res.json().catch(()=>({}));
+      const d = await res.json().catch(() => ({}));
       alert(d.error || 'Export failed');
       return;
     }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'zakat_logs.csv'; a.click();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = submittedByFilter
+      ? `zakat_logs_${submittedByFilter}.csv`
+      : 'zakat_logs.csv'; // ✅ dynamic filename
+    a.click();
     URL.revokeObjectURL(url);
   };
 
-  const SortBtn = ({field,label}) => (
-    <button className="underline-offset-2 hover:underline" onClick={()=>{
-      if (sortBy===field) setSortDir(sortDir==='asc'?'desc':'asc');
-      else { setSortBy(field); setSortDir('asc'); }
-    }}>{label}{sortBy===field? (sortDir==='asc'?' ↑':' ↓'):''}</button>
+  const SortBtn = ({ field, label }) => (
+    <button
+      className="underline-offset-2 hover:underline"
+      onClick={() => {
+        if (sortBy === field) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+        else { setSortBy(field); setSortDir('asc'); }
+      }}
+    >
+      {label}{sortBy === field ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+    </button>
   );
 
   return (
     <div className="space-y-6">
+      {/* Filters */}
       <Card id="filters">
         <CardHeader>
           <h2 className="text-xl font-semibold">Filters</h2>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-            <Input type="number" placeholder="Min Net Assets" value={minNetAssets} onChange={e=>setMinNetAssets(e.target.value)} />
-            <Input type="date" value={fromDate} onChange={e=>setFromDate(e.target.value)} />
-            <Input type="date" value={toDate} onChange={e=>setToDate(e.target.value)} />
-            <Input placeholder="Search (submitted by / amount)" value={search} onChange={e=>setSearch(e.target.value)} className="md:col-span-2" />
-            <select value={submittedByFilter} onChange={e=>setSubmittedByFilter(e.target.value)} className="input">
-  <option value="">All Users</option>
-  {[...new Set(rows.map(r=>r.submitted_by).filter(Boolean))].map(u=>(<option key={u} value={u}>{u}</option>))}
-</select>
-<Button onClick={()=>{setPage(1); load();}}>Apply</Button>
+            <Input type="number" placeholder="Min Net Assets" value={minNetAssets} onChange={e => setMinNetAssets(e.target.value)} />
+            <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+            <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
+            <Input placeholder="Search (submitted by / amount)" value={search} onChange={e => setSearch(e.target.value)} className="md:col-span-2" />
+            <select value={submittedByFilter} onChange={e => setSubmittedByFilter(e.target.value)} className="input">
+              <option value="">All Users</option>
+              {[...new Set(rows.map(r => r.submitted_by).filter(Boolean))].map(u => (
+                <option key={u} value={u}>{u}</option>
+              ))}
+            </select>
+            <Button onClick={() => { setPage(1); load(); }}>Apply</Button>
           </div>
         </CardContent>
       </Card>
 
+      {/* Records Table */}
       <Card id="dashboard">
         <CardHeader><h2 className="text-xl font-semibold">Zakat Records</h2></CardHeader>
         <CardContent>
@@ -135,21 +155,24 @@ export default function AdminTable({ password }) {
           <div className="flex items-center justify-between mt-4">
             <div className="text-sm text-slate-500 dark:text-slate-400">Page {page} of {totalPages}</div>
             <div className="flex gap-2">
-              <button className="btn-ghost rounded-xl px-3 py-2" disabled={page<=1} onClick={()=>setPage(p=>Math.max(1,p-1))}>Prev</button>
-              <button className="btn-ghost rounded-xl px-3 py-2" disabled={page>=totalPages} onClick={()=>setPage(p=>Math.min(totalPages,p+1))}>Next</button>
+              <button className="btn-ghost rounded-xl px-3 py-2" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</button>
+              <button className="btn-ghost rounded-xl px-3 py-2" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</button>
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Export */}
       <Card id="export">
         <CardHeader><h2 className="text-xl font-semibold">Export</h2></CardHeader>
         <CardContent>
-          <select value={submittedByFilter} onChange={e=>setSubmittedByFilter(e.target.value)} className="input">
-  <option value="">All Users</option>
-  {[...new Set(rows.map(r=>r.submitted_by).filter(Boolean))].map(u=>(<option key={u} value={u}>{u}</option>))}
-</select>
-<Button onClick={exportCsv}>Download CSV</Button>
+          <select value={submittedByFilter} onChange={e => setSubmittedByFilter(e.target.value)} className="input">
+            <option value="">All Users</option>
+            {[...new Set(rows.map(r => r.submitted_by).filter(Boolean))].map(u => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
+          <Button onClick={exportCsv}>Download CSV</Button>
         </CardContent>
       </Card>
     </div>
